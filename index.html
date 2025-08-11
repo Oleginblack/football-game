@@ -1,38 +1,312 @@
 <!DOCTYPE html>
-<html>
+<html lang="ru">
 <head>
-<meta charset="UTF-8">
-<title>Football Manager</title>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Битва Кланов: Telegram Эпоха</title>
 <style>
-body {
-    background: #1c1c1c;
-    color: white;
-    font-family: Arial, sans-serif;
-    text-align: center;
-}
-.card {
-    background: #2a2a2a;
-    padding: 15px;
-    margin: 20px auto;
+  body {
+    background: #111;
+    color: #eee;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    margin: 0; padding: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  header {
+    padding: 20px;
+    font-size: 1.5rem;
+    font-weight: bold;
+  }
+  #team-selection, #pitch, #controls {
+    width: 90vw;
+    max-width: 600px;
+    margin-bottom: 20px;
+  }
+  #team-selection {
+    background: #222;
+    padding: 10px;
+    border-radius: 10px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: center;
+  }
+  .player-card {
+    background: #333;
+    padding: 8px;
     border-radius: 8px;
-    max-width: 300px;
-}
-button {
-    padding: 10px 20px;
-    background: #28a745;
-    color: white;
-    border: none;
-    border-radius: 5px;
+    width: 80px;
+    text-align: center;
     cursor: pointer;
-}
+    user-select: none;
+    transition: background 0.3s;
+  }
+  .player-card.selected {
+    background: #2196f3;
+  }
+  .player-name {
+    font-weight: 600;
+    font-size: 1rem;
+  }
+  .player-stats {
+    font-size: 0.75rem;
+    color: #ccc;
+  }
+  #pitch {
+    background: #0a7000;
+    border: 2px solid #0f0;
+    border-radius: 15px;
+    min-height: 350px;
+    position: relative;
+  }
+  .pitch-player {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background: #2196f3;
+    color: white;
+    font-weight: bold;
+    text-align: center;
+    line-height: 50px;
+    position: absolute;
+    user-select: none;
+  }
+  #controls {
+    display: flex;
+    justify-content: space-around;
+  }
+  button {
+    background: #2196f3;
+    border: none;
+    padding: 10px 15px;
+    color: white;
+    font-weight: 600;
+    font-size: 1rem;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: background 0.3s;
+  }
+  button:hover {
+    background: #1769aa;
+  }
+  select {
+    padding: 8px;
+    border-radius: 8px;
+    font-size: 1rem;
+  }
+  #result {
+    background: #222;
+    padding: 10px;
+    border-radius: 10px;
+    width: 90vw;
+    max-width: 600px;
+    min-height: 60px;
+    color: #0f0;
+    font-weight: bold;
+    white-space: pre-wrap;
+  }
 </style>
 </head>
 <body>
-<h1>⚽ Football Manager</h1>
-<div class="card">
-    <p>Ваш клуб: FC Космос</p>
-    <p>Рейтинг: ⭐ 75</p>
-    <button onclick="alert('Матч завершён! Победа 3:1 🎉')">Симулировать матч</button>
-</div>
+
+<header>⚽ Битва Кланов: Telegram Эпоха</header>
+
+<section id="team-selection">
+  <!-- Игроки появятся здесь -->
+</section>
+
+<section id="pitch">
+  <!-- Игроки на поле -->
+</section>
+
+<section id="controls">
+  <button id="auto-select">Автоподбор состава</button>
+  <select id="tactics">
+    <option value="balanced">Сбалансированная</option>
+    <option value="attack">Атака</option>
+    <option value="defense">Защита</option>
+  </select>
+  <button id="simulate">Симуляция матча</button>
+  <button id="sendToBot">Отправить в бота</button>
+</section>
+
+<section id="result"></section>
+
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<script>
+  const tg = window.Telegram.WebApp;
+  tg.expand();
+
+  // Пример игроков с характеристиками
+  const players = [
+    { id: 1, name: "Иван", strength: 7, speed: 8, agility: 6, talent: 7, bothFeet: 3 },
+    { id: 2, name: "Павел", strength: 6, speed: 7, agility: 8, talent: 5, bothFeet: 2 },
+    { id: 3, name: "Сергей", strength: 5, speed: 9, agility: 7, talent: 6, bothFeet: 4 },
+    { id: 4, name: "Дмитрий", strength: 8, speed: 5, agility: 5, talent: 8, bothFeet: 5 },
+    { id: 5, name: "Алексей", strength: 6, speed: 6, agility: 9, talent: 6, bothFeet: 3 },
+    { id: 6, name: "Евгений", strength: 7, speed: 7, agility: 7, talent: 7, bothFeet: 4 },
+    { id: 7, name: "Максим", strength: 5, speed: 8, agility: 8, talent: 5, bothFeet: 2 },
+    { id: 8, name: "Никита", strength: 6, speed: 7, agility: 6, talent: 7, bothFeet: 3 },
+    { id: 9, name: "Виталий", strength: 7, speed: 6, agility: 7, talent: 6, bothFeet: 4 },
+    { id: 10, name: "Андрей", strength: 8, speed: 5, agility: 7, talent: 5, bothFeet: 2 },
+    { id: 11, name: "Олег", strength: 6, speed: 8, agility: 6, talent: 7, bothFeet: 3 },
+    { id: 12, name: "Игорь", strength: 7, speed: 7, agility: 7, talent: 8, bothFeet: 5 },
+    { id: 13, name: "Роман", strength: 5, speed: 9, agility: 8, talent: 6, bothFeet: 3 },
+    { id: 14, name: "Владимир", strength: 6, speed: 6, agility: 7, talent: 5, bothFeet: 2 },
+    { id: 15, name: "Константин", strength: 7, speed: 7, agility: 6, talent: 7, bothFeet: 4 },
+    { id: 16, name: "Станислав", strength: 6, speed: 8, agility: 7, talent: 6, bothFeet: 3 },
+    { id: 17, name: "Анатолий", strength: 5, speed: 7, agility: 8, talent: 5, bothFeet: 2 },
+    { id: 18, name: "Виктор", strength: 8, speed: 6, agility: 6, talent: 7, bothFeet: 4 },
+    { id: 19, name: "Михаил", strength: 7, speed: 7, agility: 7, talent: 6, bothFeet: 3 },
+    { id: 20, name: "Денис", strength: 6, speed: 8, agility: 5, talent: 7, bothFeet: 4 },
+  ];
+
+  const selectedPlayers = new Set();
+  const pitchPositions = [
+    { x: 260, y: 20 },  // Вратарь
+    { x: 100, y: 100 }, { x: 200, y: 100 }, { x: 320, y: 100 }, { x: 420, y: 100 }, // Защитники
+    { x: 140, y: 200 }, { x: 240, y: 200 }, { x: 340, y: 200 }, // Полузащитники
+    { x: 200, y: 300 }, { x: 300, y: 300 }, { x: 260, y: 350 }, // Нападающие
+  ];
+
+  const teamSelectionDiv = document.getElementById("team-selection");
+  const pitchDiv = document.getElementById("pitch");
+  const resultDiv = document.getElementById("result");
+  const tacticsSelect = document.getElementById("tactics");
+
+  // Создаем карточки игроков для выбора
+  function renderPlayerCards() {
+    teamSelectionDiv.innerHTML = "";
+    players.forEach(player => {
+      const card = document.createElement("div");
+      card.classList.add("player-card");
+      if(selectedPlayers.has(player.id)) card.classList.add("selected");
+      card.dataset.id = player.id;
+      card.innerHTML = `
+        <div class="player-name">${player.name}</div>
+        <div class="player-stats">
+          Сила: ${player.strength}<br />
+          Скорость: ${player.speed}<br />
+          Ловкость: ${player.agility}<br />
+          Талант: ${player.talent}<br />
+          Обе ноги: ${player.bothFeet}
+        </div>`;
+      card.onclick = () => togglePlayer(player.id);
+      teamSelectionDiv.appendChild(card);
+    });
+  }
+
+  // Добавляем/удаляем игрока из выбранных
+  function togglePlayer(id) {
+    if(selectedPlayers.has(id)) {
+      selectedPlayers.delete(id);
+    } else {
+      if(selectedPlayers.size >= 11) {
+        alert("Можно выбрать только 11 игроков!");
+        return;
+      }
+      selectedPlayers.add(id);
+    }
+    renderPlayerCards();
+    renderPitch();
+  }
+
+  // Рендер игроков на поле
+  function renderPitch() {
+    pitchDiv.innerHTML = "";
+    let idx = 0;
+    selectedPlayers.forEach(id => {
+      const player = players.find(p => p.id === id);
+      if(!player) return;
+      const pos = pitchPositions[idx] || { x: 10, y: 10 + idx*60 };
+      const div = document.createElement("div");
+      div.classList.add("pitch-player");
+      div.style.left = pos.x + "px";
+      div.style.top = pos.y + "px";
+      div.textContent = player.name[0];
+      div.title = `${player.name}\nСила: ${player.strength}\nСкорость: ${player.speed}\nЛовкость: ${player.agility}\nТалант: ${player.talent}\nОбе ноги: ${player.bothFeet}`;
+      pitchDiv.appendChild(div);
+      idx++;
+    });
+  }
+
+  // Автоподбор - выбирает 11 лучших по сумме характеристик
+  function autoSelect() {
+    selectedPlayers.clear();
+    players
+      .sort((a,b) => (b.strength + b.speed + b.agility + b.talent + b.bothFeet) - (a.strength + a.speed + a.agility + a.talent + a.bothFeet))
+      .slice(0, 11)
+      .forEach(p => selectedPlayers.add(p.id));
+    renderPlayerCards();
+    renderPitch();
+  }
+
+  // Простейшая симуляция матча
+  function simulateMatch() {
+    if(selectedPlayers.size !== 11) {
+      alert("Выберите ровно 11 игроков для симуляции.");
+      return;
+    }
+    const tactic = tacticsSelect.value;
+
+    let score = 0;
+    selectedPlayers.forEach(id => {
+      const p = players.find(pl => pl.id === id);
+      let playerScore = p.strength + p.speed + p.agility + p.talent + p.bothFeet;
+      if(tactic === "attack") playerScore *= 1.1;
+      else if(tactic === "defense") playerScore *= 0.9;
+      score += playerScore;
+    });
+    score = Math.round(score / 11);
+
+    let resultText = `Тактика: ${tactic.toUpperCase()}\nСредний балл состава: ${score}\n\n`;
+
+    if(score > 35) {
+      resultText += "🎉 Вы выиграли матч!";
+    } else if(score > 25) {
+      resultText += "⚖️ Матч завершился вничью.";
+    } else {
+      resultText += "😞 Вы проиграли матч.";
+    }
+    resultDiv.textContent = resultText;
+  }
+
+  // Отправка данных в Telegram-бота
+  function sendToBot() {
+    if(selectedPlayers.size !== 11) {
+      alert("Выберите ровно 11 игроков для отправки.");
+      return;
+    }
+    const lineup = Array.from(selectedPlayers).map(id => {
+      const p = players.find(pl => pl.id === id);
+      return {
+        id: p.id,
+        name: p.name,
+        strength: p.strength,
+        speed: p.speed,
+        agility: p.agility,
+        talent: p.talent,
+        bothFeet: p.bothFeet
+      };
+    });
+    const data = {
+      lineup,
+      tactic: tacticsSelect.value,
+      timestamp: Date.now()
+    };
+    tg.sendData(JSON.stringify(data));
+  }
+
+  document.getElementById("auto-select").onclick = autoSelect;
+  document.getElementById("simulate").onclick = simulateMatch;
+  document.getElementById("sendToBot").onclick = sendToBot;
+
+  // Инициализация
+  renderPlayerCards();
+
+</script>
+
 </body>
 </html>
